@@ -23,7 +23,8 @@ ENV PYTHONUNBUFFERED=1 \
     TRANSFORMERS_OFFLINE=1
 
 # 编译依赖（psycopg/pgvector 走 C 扩展）+ 健康检查用 curl
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# -o Acquire::Retries / --fix-missing：公网 debian 源偶发断连，加重试增强健壮性
+RUN apt-get update && apt-get install -y -o Acquire::Retries=8 --fix-missing --no-install-recommends \
         gcc libpq-dev libffi-dev curl \
     && rm -rf /var/lib/apt/lists/*
 

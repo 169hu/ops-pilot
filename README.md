@@ -228,6 +228,7 @@ docker compose up -d --build
 | `DEEPSEEK_API_KEY` | 空 | `deepseek` 模式必填 |
 | `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | 可选改写 |
 | `DEEPSEEK_MODEL` | `deepseek-chat` | 可选改写 |
+| `EVAL_DRIVER` | `rule` | 启动评测驱动：`rule` 离线可复现；`deepseek` 生成真实 LLM 评测报告（略慢） |
 
 > **设计取舍**：当前数据层为纯文件（`store.py` 读 `data/generated/*.json`），因此单容器即可满足部署；`requirements.txt` 已预留 `psycopg`/`pgvector`/`redis`/`sqlmodel`，后续切真实数据库时再在 compose 增加 `postgres` 服务并替换 `store.py`，业务代码与前端无需改动。默认 `rule` 驱动保证离线稳定，`deepseek` 驱动仅在显式注入 API Key 时启用。
 

@@ -1,0 +1,33 @@
+# 版本控制 / VCS
+.git
+.gitignore
+
+# 本地虚拟环境
+.venv
+venv
+
+# Python 缓存
+__pycache__
+*.py[cod]
+*.egg-info
+
+# Node
+node_modules
+ui/node_modules
+
+# 运行期生成产物（镜像内由 entrypoint 重建）
+data/generated/*
+data/generated/.gitkeep
+!data/generated/README.md
+results/
+reports/
+*.log
+
+# 环境密钥（运行时通过 docker-compose 注入）
+.env
+.env.local
+
+# 编辑器
+.idea
+.vscode
+.DS_Store

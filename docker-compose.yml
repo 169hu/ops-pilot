@@ -1,0 +1,37 @@
+# OpsPilot · Docker Compose 单容器部署
+#
+# 原理：
+#   - 后端 FastAPI 单容器即完整产品：REST API + 前端 SPA（ui/dist）同端口托管。
+#   - 数据集（data/generated）与评测报告（reports/）在容器启动时由
+#     entrypoint 重建，镜像不携带任何本地生成产物 → 一台镜像到处可复现。
+#   - 默认 LLM_DRIVER=rule 全离线；如需真实 LLM，设 DEEPSEEK_API_KEY 并改 LLM_DRIVER。
+#
+# 用法：
+#   docker compose up -d --build
+#   http://localhost:8000       前端控制台
+#   http://localhost:8000/api/health   健康检查
+#
+# 环境变量（均可通过 .env 或 shell 覆盖）：
+#   LLM_DRIVER        rule（默认，离线）| deepseek
+#   DEEPSEEK_API_KEY  deepseek 模式必填
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ops-pilot:latest
+    container_name: ops-pilot-backend
+    ports:
+      - "8000:8000"
+    environment:
+      LLM_DRIVER: ${LLM_DRIVER:-rule}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped

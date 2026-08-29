@@ -20,7 +20,7 @@
 - [x] **阶段 2 · LangGraph 3 Agent 编排**：Triage/Retrieval/Action + 风险路由 + Tool Gateway 联动
 - [x] **阶段 3 · Eval 闭环（golden + 攻击门禁）**
 - [x] **阶段 4 · 前端 React + AntD（5 页面）**
-- [ ] 阶段 5 · Docker Compose + README + 部署
+- [x] **阶段 5 · Docker Compose + README + 部署**
 
 ### 7 步调用链（Tool Gateway 唯一入口）
 
@@ -195,6 +195,44 @@ npm run dev            # 开发模式，proxy /api -> 127.0.0.1:8000
 
 ---
 
+## 阶段 5 · Docker Compose + 部署
+
+单容器即可部署完整产品：后端 FastAPI 同一端口同时提供 **REST API + 前端 SPA**，镜像内不携带任何本地生成产物，启动时自动重建数据与评测报告，保证**一条镜像到处可复现**。
+
+**部署文件**：
+
+| 文件 | 作用 |
+|---|---|
+| `Dockerfile` | 多阶段构建：stage1 用 Node 构建 React → `ui/dist`；stage2 用 Python 装依赖并拷贝产物 |
+| `docker-compose.yml` | 编排 `backend` 服务 + 健康检查 + 环境变量注入 |
+| `docker/entrypoint.sh` | 容器启动：重建数据集 → 生成评测基线 → 启动 uvicorn |
+| `.dockerignore` | 排除 `.venv`/`node_modules`/生成产物/密钥等 |
+
+**一键启动**：
+
+```bash
+docker compose up -d --build
+```
+
+| 入口 | 地址 |
+|---|---|
+| 前端控制台 | http://localhost:8000 |
+| 健康检查 | http://localhost:8000/api/health |
+| 工单 API | http://localhost:8000/docs |
+
+**环境变量**（可用 `.env` 或 shell 覆盖）：
+
+| 变量 | 默认 | 说明 |
+|---|---|---|
+| `LLM_DRIVER` | `rule` | `rule` 全离线可复现；`deepseek` 走真实 LLM |
+| `DEEPSEEK_API_KEY` | 空 | `deepseek` 模式必填 |
+| `DEEPSEEK_BASE_URL` | `https://api.deepseek.com` | 可选改写 |
+| `DEEPSEEK_MODEL` | `deepseek-chat` | 可选改写 |
+
+> **设计取舍**：当前数据层为纯文件（`store.py` 读 `data/generated/*.json`），因此单容器即可满足部署；`requirements.txt` 已预留 `psycopg`/`pgvector`/`redis`/`sqlmodel`，后续切真实数据库时再在 compose 增加 `postgres` 服务并替换 `store.py`，业务代码与前端无需改动。默认 `rule` 驱动保证离线稳定，`deepseek` 驱动仅在显式注入 API Key 时启用。
+
+---
+
 ## 阶段 0 · 数据层
 
 ### 生成（确定性、可复现）
@@ -271,6 +309,11 @@ ops-pilot/
 ├── ui/                   # 阶段4 · React + AntD 前端
 │   ├── src/pages/        # 工单列表/详情/审批/审计/评测
 │   └── vite.config.js    # proxy /api -> 8000
+├── docker/               # 阶段5 · 容器启动脚本
+│   └── entrypoint.sh     # 启动前重建数据 + 评测基线
+├── Dockerfile            # 阶段5 · 多阶段构建（Node 建前端 + Python 运行时）
+├── docker-compose.yml    # 阶段5 · 单容器编排 + 健康检查
+├── .dockerignore
 ├── requirements.txt
 └── README.md
 ```

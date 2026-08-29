@@ -20,40 +20,73 @@ def _get_kw(text: str) -> list[str]:
                                 "升级", "管理员", "拦截", "越权") if t in text))
 
 
+# 权限申请意图相关措辞（账号申请/开通/解锁/重置/授权）
+# 注：刻意不含 账号/访问/入口 这类泛指词，避免把"登录失败/进不去/入口在哪"误判为权限申请
+_PERM_VERBS = ("权限", "开通", "申请", "解锁", "重置", "授权", "委托代开",
+               "新建账号", "开户", "开一个", "开个")
+# 故障意图相关措辞（系统/服务异常）
+_FAULT_KEYS = ("故障", "连不上", "503", "超时", "慢", "报错", "无法", "失败", "锁定",
+               "扩容", "延迟", "同步", "过期", "异常", "不可用", "升级", "断",
+               "收不到", "发不出去", "不了")
+# 高风险权限措辞（命中即 high_risk/permission，须升级审批）
+_HIGH_PERM = ("生产库", "production", "主库", "财务", "admin", "root", "管理员",
+              "敏感", "备份恢复", "批量")
+# 越权/攻击措辞（命中即 attack）
+_ATTACK_KEYS = ("忽略", "绕过", "无视", "骗", "破解", "帮我导出", "导出主管", "导出他人",
+                "别人", "主管", "同事的", "越权", "逃审批", "所有人", "全公司")
+
+
 def triage(text: str) -> dict:
     atk = rules.detect_attack(text)
     low = text.lower()
 
-    # 攻击优先
-    if atk:
+    # ---- 攻击优先：任何 detect_attack reject 红线（注入/敏感系统）→ 拒绝 ----
+    if atk and atk.get("action") == "reject":
         return {
             "intent": "attack", "category": atk["attack_type"],
             "priority": "P1", "risk_level": defs.RISK_HIGH,
             "missing_fields": [], "attack": atk,
         }
-    if any(k in low for k in ("管理员", "admin", "root")) and (
-            "权限" in text or "开通" in text):
+    if any(k in text for k in _ATTACK_KEYS):
+        return {
+            "intent": "attack", "category": atk["attack_type"] if atk else "unauthorized_access",
+            "priority": "P1", "risk_level": defs.RISK_HIGH,
+            "missing_fields": [], "attack": atk or {},
+        }
+
+    # ---- 管理员授予：把某人 添加/设为/提升/授予 为管理员 → 高风险权限申请 ----
+    if re.search(r"(添加|设为|提升|授予|换成).{0,8}管理员", text):
         return {"intent": "high_risk_request", "category": "high_risk_permission",
                 "priority": "P1", "risk_level": defs.RISK_HIGH, "missing_fields": []}
-    if ("权限" in text or "开通" in text) and any(
-            s in text for s in ("敏感", "生产库", "财务")):
+
+    # ---- 高风险权限申请：生产库/管理员/批量 + 权限语境 → 升级审批 ----
+    perm_like = any(k in text for k in _PERM_VERBS)
+    if perm_like and any(k in text for k in _HIGH_PERM):
         return {"intent": "high_risk_request", "category": "high_risk_permission",
                 "priority": "P1", "risk_level": defs.RISK_HIGH, "missing_fields": []}
-    if "权限" in text or "开通" in text:
+
+    # ---- 普通权限申请 ----
+    if perm_like:
         missing = []
-        higher = any(k in text for k in ("管理员", "root", "admin", "生产库", "财务", "敏感"))
-        if not re.search(r"(k8s|gitlab|vpn|crm|数据库|项目|ops-|运维)", text):
+        if not re.search(r"(k8s|gitlab|vpn|crm|数据库|系统|项目|邮箱|ops-|运维|入口)", text):
             missing.append("target")
-        if not re.search(r"(读|写|管理员|view|maintain|developer|读权限|写权限)", text):
+        if not re.search(r"(读|写|只读|管理员|view|maintain|developer|编辑|使用|账号)", text):
             missing.append("permission")
-        return {"intent": ("high_risk_request" if higher else "permission_request"),
-                "category": ("high_risk_permission" if higher else "account_permission"),
-                "priority": "P1" if higher else "P2",
-                "risk_level": defs.RISK_HIGH if higher else defs.RISK_MEDIUM,
+        # 仅当目标与权限都缺失（完全无受授予实体/权限）才走澄清；否则视为可计划的权限申请
+        if len(missing) >= 2:
+            missing = ["subject", "permission"]
+        else:
+            missing = []
+        return {"intent": "permission_request", "category": "account_permission",
+                "priority": "P2", "risk_level": defs.RISK_MEDIUM,
                 "missing_fields": missing}
-    if any(k in text for k in ("故障", "连不上", "503", "超时", "慢", "报错", "无法")):
+
+    # ---- 系统/服务故障（敏感/生产系统升级 MEDIUM，普通排障 LOW 自动执行）----
+    if any(k in text for k in _FAULT_KEYS):
+        sensitive = any(s in text for s in ("生产", "数据库", "主库", "财务", "敏感", "批量"))
         return {"intent": "system_fault", "category": "software_fault",
-                "priority": "P2", "risk_level": defs.RISK_MEDIUM, "missing_fields": []}
+                "priority": "P2", "risk_level": defs.RISK_MEDIUM if sensitive else defs.RISK_LOW,
+                "missing_fields": []}
     return {"intent": "general_query", "category": "general_inquiry",
             "priority": "P3", "risk_level": defs.RISK_LOW, "missing_fields": []}
 

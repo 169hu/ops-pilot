@@ -121,27 +121,62 @@ def tool_executor(state: GraphState) -> dict:
     plan = state.get("tool_plan", [])
     results = list(state.get("execution_results", []))
     steps = list(state.get("trace_steps", []))
-    subject = state["requester"].get("user_id", "")
-    caller = state["requester"].get("role", "employee")
+    approved = bool(state.get("approved"))
+    requester = state["requester"]
+    caller = requester.get("role", "employee")
+    subject = requester.get("subject_user_id") or requester.get("user_id", "")
     ctx = {
-        "caller_role": caller, "caller_user_id": state["requester"].get("user_id"),
+        "caller_role": caller, "caller_user_id": requester.get("user_id"),
         "subject_user_id": subject, "ticket_id": state["ticket_id"],
         "ticket_text": state["ticket_text"], "intent": state.get("intent"),
-        "category": state.get("category"), "approved": bool(state.get("approved")),
+        "category": state.get("category"), "approved": approved,
     }
     for item in plan:
         tool = item["tool"]
         args = dict(item.get("args", {}))
-        if "{subject}" in args.get("user_id", ""):
+        # 占位符补全：{subject} -> 被授权人；{permission} -> 从工单提取或默认
+        if tool == "grant_permission":
+            args.setdefault("user_id", subject)
+            if args.get("permission") in (None, "", "{permission}"):
+                args["permission"] = _resolve_permission(state.get("ticket_text", ""))
+            if args.get("system") in (None, ""):
+                args["system"] = _resolve_system(state.get("ticket_text", ""))
+        elif tool == "check_permission_policy":
+            # schema 需 subject/target/permission：默认以被授权人与系统/权限补全
+            args.setdefault("subject", subject)
+            args.setdefault("permission", _resolve_permission(state.get("ticket_text", "")))
+            args.setdefault("target", _resolve_system(state.get("ticket_text", "")))
+        elif args.get("user_id") in (None, "", "{subject}"):
             args["user_id"] = subject
         for k in list(args):
             if isinstance(args[k], str) and args[k].startswith("{") and args[k].endswith("}"):
                 key = args[k][1:-1]
-                args[k] = state["requester"].get(key)
+                args[k] = requester.get(key)
         r = invoke(tool, args, ctx)
         results.append({"tool": tool, "args": args, "gateway": r})
         steps = steps + [_step(state, "tool", r["tool_name"], r, 0.0, 0)]
     return {"execution_results": results, "trace_steps": steps}
+
+
+def _resolve_permission(text: str) -> str:
+    low = text.lower()
+    if any(k in low for k in ("admin", "root", "管理员", "最高")):
+        return "admin"
+    if any(k in low for k in ("写", "maintain", "developer", "编辑")):
+        return "Maintainer"
+    if any(k in low for k in ("读", "只读", "view", "查看")):
+        return "Read"
+    return "Maintainer"
+
+
+def _resolve_system(text: str) -> str:
+    low = text.lower()
+    for kw, code in (("生产库", "prod_db"), ("财务", "prod_db"),
+                     ("gitlab", "gitlab"), ("vpn", "vpn"),
+                     ("crm", "crm"), ("邮箱", "mail"), ("邮件", "mail")):
+        if kw in low:
+            return code
+    return "gitlab"
 
 
 def final_response(state: GraphState) -> dict:
@@ -151,9 +186,15 @@ def final_response(state: GraphState) -> dict:
         s = r["gateway"]["status"]
         outcome.append(f"{r['tool']} -> {s}")
     full = "\n".join(outcome)
-    state["final_answer"] = (
-        f"工单 {state['ticket_id']} 处理完成。\n"
-        f"意图={state.get('intent')} | 风险={state.get('risk_level')} | "
-        f"状态={state.get('approval_required') and '待审批' or '已处理'}\n"
-        f"执行摘要：\n{full or '（本次无工具执行，建议人工跟进）'}")
-    return {}
+    # 状态判定：已批准落地执行 -> 已处理；否则按审批/拒绝
+    executed = bool(state.get("execution_results"))
+    status = "已处理" if executed else (
+        "已拒绝" if state.get("risk_decision") in ("REJECT", "APPROVE_ESCALATE")
+        or state.get("risk_level") == "HIGH" else "待审批")
+    return {
+        "final_answer": (
+            f"工单 {state['ticket_id']} 处理完成。\n"
+            f"意图={state.get('intent')} | 风险={state.get('risk_level')} | "
+            f"状态={status}\n"
+            f"执行摘要：\n{full or '（本次无工具执行，建议人工跟进）'}"),
+    }

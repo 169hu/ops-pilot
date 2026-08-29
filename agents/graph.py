@@ -52,6 +52,8 @@ def _route(state):
     decision = state.get("risk_decision", "AUTO")
     if decision in ("REJECT", "APPROVE_ESCALATE") or state.get("risk_level") == "HIGH":
         return "reject"
+    if state.get("approved"):
+        return "execute"   # 已批准：跳过审批等待，直接落地执行
     if decision == "APPROVE" or state.get("approval_required"):
         return "wait"      # 进入待审批终态（approval_required=True）
     return "execute"
@@ -60,10 +62,11 @@ def _route(state):
 build = build_graph
 
 
-def run_ticket(ticket: dict) -> dict:
+def run_ticket(ticket: dict, approved: bool = False) -> dict:
     """外部入口：把一条工单投进图，返回平台契约 dict + trace。
 
     ticket 需含 ticket_id / title / description / requester(无需完整，含 user_id/role)。
+    approved: 审批通过后重放，注入审批态，令 grant 类工具跳过等待、落地执行。
     """
     graph, request_state = build(), None
     init = {
@@ -71,6 +74,7 @@ def run_ticket(ticket: dict) -> dict:
         "ticket_text": (ticket.get("title", "") + "，" + ticket.get("description", "")
                         ).strip("，"),
         "requester": ticket.get("requester", {"user_id": "U001", "role": "employee"}),
+        "approved": approved,
         "trace_steps": [],
     }
     result = graph.invoke(init)

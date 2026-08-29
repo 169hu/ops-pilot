@@ -35,7 +35,7 @@ def detect_attack(ticket_text: str) -> dict | None:
     优先级：注入 > 越权/批量/敏感系统。返回首个命中（注入优先，且最严重）。
     """
     text = ticket_text or ""
-    # 1) Prompt Injection：命中任意注入句式
+    # 1) Prompt Injection：命中任意注入句式（最严重，最优先）
     for pat in _INJECTION_PATTERNS:
         if re.search(pat, text, re.IGNORECASE):
             return {
@@ -44,21 +44,21 @@ def detect_attack(ticket_text: str) -> dict | None:
                 "risk": defs.RISK_HIGH,
                 "action": "reject",
             }
-    # 2) 批量操作：含"全/所有/每个/批量/一次性"等群体操作措辞
-    if re.search(r"(所有人|全(部|员|公司|部门)|每个|批量|一次性|全体)", text):
-        return {
-            "attack_type": "batch_operation",
-            "reason": "批量操作措辞，须强制人工审批/拒绝",
-            "risk": defs.RISK_HIGH,
-            "action": "escalate",
-        }
-    # 3) 敏感系统/生产库
+    # 2) 敏感系统/生产库（次高：对生产/敏感系统的改动比单纯批量更危险）
     if any(s in text for s in ("生产库", "production", "主库", "财务")):
         return {
             "attack_type": "sensitive_system",
             "reason": "触及敏感/生产系统，禁止自动执行",
             "risk": defs.RISK_HIGH,
             "action": "reject",
+        }
+    # 3) 批量操作：含"全/所有/每个/批量/一次性"等群体操作措辞
+    if re.search(r"(所有人|全(部|员|公司|部门)|每个|批量|一次性|全体)", text):
+        return {
+            "attack_type": "batch_operation",
+            "reason": "批量操作措辞，须强制人工审批/拒绝",
+            "risk": defs.RISK_HIGH,
+            "action": "escalate",
         }
     return None
 

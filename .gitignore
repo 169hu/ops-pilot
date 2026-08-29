@@ -22,6 +22,9 @@ data/generated/*.json
 .pytest_cache/
 *.log
 
+# 运行时审计产物（Tool Gateway 调用日志，不入库）
+results/
+
 # 编辑器
 .idea/
 .vscode/

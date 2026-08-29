@@ -1,0 +1,26 @@
+# --- OpsPilot 后端运行时依赖（阶段1起使用；阶段0生成器为零依赖）---
+fastapi==0.115.*
+uvicorn[standard]
+pydantic==2.*
+python-dotenv
+
+# Agent 编排
+langgraph
+langchain-core
+langchain-openai
+
+# 向量检索（pgvector）
+psycopg[binary]
+pgvector
+
+# 数据访问 / 配置
+sqlmodel
+redis
+
+# 安全
+python-jose[cryptography]
+passlib[bcrypt]
+
+# 测试 / 评测
+pytest
+httpx

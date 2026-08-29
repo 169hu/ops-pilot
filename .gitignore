@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# 环境与密钥
+.env
+.env.local
+
+# Node / 前端
+node_modules/
+dist/
+build/
+
+# 数据生成输出（除 README 外，generated 数据不入库，保证可复现）
+data/generated/*.json
+!data/generated/.gitkeep
+
+# 测试与日志
+.pytest_cache/
+*.log
+
+# 编辑器
+.idea/
+.vscode/
+.DS_Store

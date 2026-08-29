@@ -31,7 +31,7 @@ export default function ApprovalFlow() {
     },
     {
       title: '标题', dataIndex: 'title', width: 180,
-      render: (v, r) => <Button type="link" style={{ padding: 0 }} onClick={() => nav(`/tickets/${r.ticket_id}`)}>{v}</Button>,
+      render: (v, r) => <Button type="link" style={{ padding: 0 }} onClick={() => nav(`/app/tickets/${r.ticket_id}`)}>{v}</Button>,
     },
     { title: '分类', dataIndex: 'intent', width: 120, render: (v) => <Tag>{INTENTS[v] || v}</Tag> },
     { title: '风险', dataIndex: 'risk_level', width: 80, render: (v) => <Tag color={RISK_COLOR[v]}>{RISK_TEXT[v]}</Tag> },

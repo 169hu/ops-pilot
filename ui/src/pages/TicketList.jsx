@@ -49,7 +49,7 @@ export default function TicketList() {
     {
       title: '描述', dataIndex: 'description', ellipsis: true,
       render: (v, r) => (
-        <Button type="link" style={{ padding: 0 }} onClick={() => nav(`/tickets/${r.ticket_id}`)}>
+        <Button type="link" style={{ padding: 0 }} onClick={() => nav(`/app/tickets/${r.ticket_id}`)}>
           {v}
         </Button>
       ),

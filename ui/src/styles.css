@@ -79,3 +79,184 @@ h1, h2, h3, .serif {
   font-family: "JetBrains Mono", Consolas, monospace;
   font-size: 12px;
 }
+
+/* ============ Landing 落地页 ============ */
+.landing {
+  min-height: 100vh;
+  background: var(--paper);
+  color: #2b3440;
+  overflow-x: hidden;
+}
+.landing a { color: inherit; text-decoration: none; }
+
+/* Top bar */
+.landing-nav {
+  position: sticky; top: 0; z-index: 20;
+  background: rgba(246, 244, 239, 0.82);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(31, 62, 110, 0.08);
+}
+.landing-nav-inner {
+  max-width: 1120px; margin: 0 auto;
+  padding: 14px 24px;
+  display: flex; align-items: center; gap: 28px;
+}
+.landing-logo { display: flex; align-items: center; gap: 10px; }
+.landing-brand {
+  font-family: "Songti SC", "SimSun", serif;
+  font-size: 20px; font-weight: 800; letter-spacing: 1px;
+  color: var(--ink-deep);
+}
+.landing-nav-links {
+  margin-left: auto; display: flex; gap: 24px;
+  font-size: 15px; color: #48617f;
+}
+.landing-nav-links a:hover { color: var(--ink); }
+
+/* CTA button */
+.landing-cta {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: #fff;
+  padding: 9px 18px; border-radius: 8px;
+  font-size: 14px; font-weight: 600;
+  cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: all .18s ease;
+}
+.landing-cta:hover { background: var(--ink-deep); border-color: var(--ink-deep); }
+.landing-cta.nav { padding: 7px 14px; font-size: 13px; }
+.landing-cta.ghost { background: transparent; color: var(--ink); }
+.landing-cta.ghost:hover { background: rgba(31, 62, 110, 0.08); }
+.landing-cta.large { padding: 14px 30px; font-size: 16px; }
+
+/* Hero */
+.landing-hero {
+  position: relative;
+  min-height: 78vh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 80px 24px 60px;
+  overflow: hidden;
+}
+.spotlight-board { position: absolute; inset: 0; pointer-events: none; }
+.spotlight-board canvas { width: 100%; height: 100%; }
+.spotlight-cursor {
+  position: absolute; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--ink);
+  opacity: 0; transform: translate(-50%, -50%);
+  box-shadow: 0 0 18px 4px rgba(31, 62, 110, 0.55);
+  pointer-events: none;
+}
+
+.landing-hero-content {
+  position: relative; max-width: 860px;
+  text-align: center;
+  animation: heroFadeUp .8s ease both;
+  z-index: 2;
+}
+.landing-badge {
+  display: inline-block;
+  padding: 6px 14px; border-radius: 999px;
+  background: rgba(31, 62, 110, 0.08);
+  border: 1px solid rgba(31, 62, 110, 0.18);
+  color: var(--ink); font-size: 13px; letter-spacing: 1px;
+  margin-bottom: 26px;
+}
+.landing-title {
+  font-family: "Songti SC", "SimSun", serif;
+  font-size: clamp(34px, 5.4vw, 62px);
+  line-height: 1.22; color: var(--ink-deep);
+  margin: 0 0 22px; font-weight: 800;
+}
+.landing-title b { color: var(--ink); }
+.landing-desc {
+  font-size: 17px; line-height: 1.9;
+  color: #48617f; max-width: 660px; margin: 0 auto 34px;
+}
+.landing-desc b { color: var(--ink); font-weight: 700; }
+.landing-actions { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.landing-metrics {
+  margin-top: 46px;
+  display: flex; justify-content: center; gap: 56px; flex-wrap: wrap;
+}
+.landing-metrics > div { text-align: center; }
+.landing-metrics b {
+  display: block; color: #8090a3; font-size: 12px; font-weight: 500; letter-spacing: 1px;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.landing-metrics span {
+  font-family: "Songti SC", "SimSun", serif;
+  font-size: 22px; font-weight: 800; color: var(--ink);
+}
+.landing-scroll {
+  position: absolute; bottom: 26px; left: 50%; transform: translateX(-50%);
+  color: #8090a3; font-size: 20px; animation: bounce 2s infinite;
+}
+
+/* Sections */
+.landing-section { max-width: 1120px; margin: 0 auto; padding: 90px 24px; }
+.landing-dim { background: #fff; border-top: 1px solid rgba(31,62,110,.06); border-bottom: 1px solid rgba(31,62,110,.06); max-width: 100%; }
+.landing-dim > * { max-width: 1120px; margin-left: auto; margin-right: auto; }
+.landing-section-title {
+  font-size: 30px; text-align: center; margin: 0 0 10px;
+  font-family: "Songti SC", "SimSun", serif; color: var(--ink-deep); font-weight: 800;
+}
+.landing-section-sub { text-align: center; color: #8090a3; margin-bottom: 46px; }
+
+.landing-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+.landing-feature {
+  background: #fff; border: 1px solid rgba(31,62,110,.08);
+  border-radius: 12px; padding: 26px;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.landing-feature:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(31,62,110,.10); }
+.landing-feature-icon {
+  width: 46px; height: 46px; border-radius: 10px;
+  background: rgba(31,62,110,.08); color: var(--ink);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; margin-bottom: 16px;
+}
+.landing-feature h3 { font-size: 17px; margin: 0 0 8px; color: var(--ink-deep); font-weight: 700; }
+.landing-feature p { color: #5b6b80; font-size: 14px; line-height: 1.75; margin: 0; }
+
+.landing-stack { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.landing-stack span {
+  padding: 10px 18px; border-radius: 999px;
+  background: rgba(31,62,110,.06); color: var(--ink);
+  border: 1px solid rgba(31,62,110,.14);
+  font-size: 14px; font-weight: 500;
+}
+
+/* CTA band */
+.landing-cta-band {
+  text-align: center; padding: 96px 24px;
+  background: linear-gradient(180deg, rgba(31,62,110,.04), rgba(31,62,110,.10));
+}
+.landing-cta-band h2 {
+  font-size: 32px; margin: 0 0 14px;
+  font-family: "Songti SC", "SimSun", serif; color: var(--ink-deep); font-weight: 800;
+}
+.landing-cta-band p { color: #5b6b80; margin: 0 0 30px; font-size: 16px; }
+
+/* Footer */
+.landing-footer {
+  border-top: 1px solid rgba(31,62,110,.08);
+  padding: 26px 24px; text-align: center;
+  color: #8090a3; font-size: 13px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.landing-footer-tags { opacity: .8; }
+.landing-footer .sep { margin: 0 6px; }
+
+/* Animations */
+@keyframes heroFadeUp { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+@keyframes bounce { 0%,100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, 6px); } }
+
+@media (max-width: 880px) {
+  .landing-nav-links { display: none; }
+  .landing-grid { grid-template-columns: 1fr; }
+  .landing-metrics { gap: 30px; }
+}

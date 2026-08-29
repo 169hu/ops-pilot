@@ -22,7 +22,13 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         algorithm: theme.defaultAlgorithm,
         components: {
           Layout: { headerBg: '#1F3E6E', siderBg: '#F6F4EF', headerHeight: 56 },
-          Menu: { itemBg: 'transparent' },
+          Menu: {
+            itemBg: 'transparent',
+            itemSelectedBg: 'rgba(31, 62, 110, 0.10)',
+            itemSelectedColor: '#1F3E6E',
+            itemHoverBg: 'rgba(31, 62, 110, 0.06)',
+            itemHoverColor: '#1F3E6E',
+          },
           Card: { headerBg: '#FFFFFF' },
         },
       }}

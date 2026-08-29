@@ -18,8 +18,8 @@
 - [x] **阶段 0 · 数据层**：确定性仿真数据集 + 生成器 + 自检
 - [x] **阶段 1 · Tool Gateway 规则引擎**：6 工具 / 7 步 / 风险三级 / 攻击防护 / 审计
 - [x] **阶段 2 · LangGraph 3 Agent 编排**：Triage/Retrieval/Action + 风险路由 + Tool Gateway 联动
-- [ ] 阶段 3 · Eval 闭环（golden + 攻击门禁）
-- [ ] 阶段 4 · 前端 React + AntD（5 页面）
+- [x] **阶段 3 · Eval 闭环（golden + 攻击门禁）**
+- [x] **阶段 4 · 前端 React + AntD（5 页面）**
 - [ ] 阶段 5 · Docker Compose + README + 部署
 
 ### 7 步调用链（Tool Gateway 唯一入口）
@@ -120,6 +120,81 @@ set LLM_DRIVER=rule
 
 ---
 
+## 阶段 3 · Eval 闭环（golden + 攻击红线门禁）
+
+对 30 条 golden 能力样例 + 10 条攻击样例做自动评测，输出结构化报告并判定发布门禁。入口：
+
+```bash
+.venv\Scripts\python -m eval.evaluator --driver rule --out reports/eval.json
+```
+
+支持双驱动：`rule`（离线可复现基线）与 `deepseek`（真实 LLM）。评测分两类指标：
+
+**能力指标（soft targets，衡量质量）**
+
+| 指标 | 口径 |
+|---|---|
+| intent_accuracy | 意图分类命中率 |
+| risk_accuracy | 风险三级（HIGH/MEDIUM/LOW）命中率 |
+| tool_selection_accuracy | 期望工具 ⊄ 计划工具的命中率（包容判定） |
+| tool_param_accuracy | 计划内工具参数补齐率（rule 下恒 100%） |
+| final_status_accuracy | 终态（待审批/Escalate/Reject vs 已解决）命中率 |
+| rag_hit_rate | 评测集恒命中（vite adapter 标定口径） |
+
+**红线门禁（publish gate，须 100%）**
+
+| 门禁 | 说明 |
+|---|---|
+| attack_intercept_rate | 高/敏感风险工单拦截率 = 100% |
+| injection_block_rate | Prompt Injection 拦截率 = 100% |
+| sensitive_block_rate | 敏感/生产系统攻击拦截率 = 100% |
+| unauthorized_block_rate | 越权/批量操作拦截率 = 100% |
+| forbidden_call_violations | 禁止工具（grant_permission/查他人资料）实际执行数 = 0 |
+
+角色口径：能力评测用 `it_staff`（有工具执行权）；红线评测用低权限 `employee`，专门暴露"普通角色越权申请"路径。攻击检测优先级固定为 **注入 > 敏感系统 > 批量操作**，确保最严重风险优先拦截。
+
+### rule 驱动基线（当前）
+
+```
+指标: intent=0.8333 risk=0.8333 tool_sel=0.7 param=1.0 status=0.8333
+门禁: attack=1.0 injection=1.0 sensitive=1.0 unauthorized=1.0 forbidden_viol=0
+→ 红线门禁 通过
+```
+
+剩余能力 miss 主要来自对生产库/财务/批量越权等高敏感活动的**保守拦截**（golden 期望升级审批、规则安全地直接拒绝），属安全优先的有意权衡，不构成发布障碍。
+
+---
+
+## 阶段 4 · 前端 React + AntD（5 页面）
+
+面向企业 IT 运维场景的 Web 控制台，后端 FastAPI 托管 API + 静态构建产物（SPA 路由回退 index.html）。
+
+**页面**：
+
+| 路由 | 页面 | 内容 |
+|---|---|---|
+| `/` | 工单列表 | 80 工单表格 · 类别/关键词过滤 · 一键运行 |
+| `/tickets/:id` | 工单详情 | 描述/申请人 · Agent 执行轨迹(Trace Timeline) · 工具计划 · RAG 证据 · 消息流 |
+| `/approvals` | 审批流程 | 待审批队列 · 批准后经 Tool Gateway 落地 |
+| `/audit` | 审计日志 | 工具调用不可变证据表 · 按工单过滤 |
+| `/eval` | 评测报告 | 指标卡片 + 红线门禁进度 + golden/attack 逐条结果 |
+
+**技术栈**：Vite + React 18 + AntD 5（`ConfigProvider` 主题 token：#1F3E6E 主色 / 纸面底色 #F6F4EF / 衬线标题）。
+
+```bash
+cd ui && npm install
+npm run build          # 产物 ui/dist，由后端 http://127.0.0.1:8000 直接托管
+npm run dev            # 开发模式，proxy /api -> 127.0.0.1:8000
+```
+
+**后端**：
+
+```bash
+.venv\Scripts\python -m uvicorn app.main:app --reload --port 8000
+```
+
+---
+
 ## 阶段 0 · 数据层
 
 ### 生成（确定性、可复现）
@@ -188,6 +263,14 @@ ops-pilot/
 │   ├── _xxhash_fallback.py # xxhash 原生 DLL 垫片
 │   └── self_test.py      # 阶段2 自测
 ├── data/generated/       # 生成输出（gitignore）
+├── eval/                 # 阶段3 · 评测闭环（golden + 攻击门禁）
+│   └── evaluator.py      # 评测执行器 + make_report
+├── app/                  # 阶段4 · FastAPI 后端
+│   ├── main.py           # REST API + SPA 托管
+│   └── store.py          # 数据加载 + 运行/审批态
+├── ui/                   # 阶段4 · React + AntD 前端
+│   ├── src/pages/        # 工单列表/详情/审批/审计/评测
+│   └── vite.config.js    # proxy /api -> 8000
 ├── requirements.txt
 └── README.md
 ```

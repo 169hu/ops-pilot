@@ -1,5 +1,5 @@
 # --- OpsPilot 后端运行时依赖（阶段1起使用；阶段0生成器为零依赖）---
-fastapi==0.115.*
+fastapi>=0.115
 uvicorn[standard]
 pydantic==2.*
 python-dotenv

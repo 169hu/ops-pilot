@@ -17,7 +17,7 @@
 
 - [x] **阶段 0 · 数据层**：确定性仿真数据集 + 生成器 + 自检
 - [x] **阶段 1 · Tool Gateway 规则引擎**：6 工具 / 7 步 / 风险三级 / 攻击防护 / 审计
-- [ ] 阶段 2 · LangGraph 3 Agent 编排
+- [x] **阶段 2 · LangGraph 3 Agent 编排**：Triage/Retrieval/Action + 风险路由 + Tool Gateway 联动
 - [ ] 阶段 3 · Eval 闭环（golden + 攻击门禁）
 - [ ] 阶段 4 · 前端 React + AntD（5 页面）
 - [ ] 阶段 5 · Docker Compose + README + 部署
@@ -61,6 +61,62 @@
 py -3 -m tool_gateway.self_test
 ```
 覆盖：低风险只读自动执行、角色受限拦截、中风险审批挂起、生产库 admin 拦截、Prompt Injection 拦截、批量操作拦截、参数缺失、未知工具、审计落盘。
+
+---
+
+## 阶段 2 · LangGraph 3 Agent 编排
+
+把 Tool Gateway 接入 LangGraph 状态机，形成完整工单处理闭环。
+
+### 状态流转
+
+```mermaid
+flowchart LR
+    START --> triage
+    triage -- 缺信息 --> ask("Ask Clarification") --> END
+    triage --> retrieval
+    retrieval --> action
+    action --> risk_router
+    risk_router -- LOW/AUTO --> exec("Tool Executor")
+    exec --> final
+    risk_router -- APPROVE --> final
+    risk_router -- REJECT --> final
+    final --> END
+```
+
+### 3 Agent 职责
+
+| 节点 | 职责 | 产出 |
+|---|---|---|
+| **Triage** | 解析工单意图/类别/优先级/风险/缺失信息 | `intent` `category` `priority` `risk_level` `missing_fields` |
+| **Retrieval** | 抽取检索词 → 知识库 RAG → 整理证据 | `retrieved_docs` `knowledge_hits` |
+| **Action** | 综合工单+证据+风险，生成工具计划与审批判断 | `tool_plan` `approval_required` `risk_decision` |
+
+控制节点：`ask_clarification`（信息不足补全）、`risk_router`（AUTO/APPROVE/REJECT 路由）、`tool_executor`（唯一经 Tool Gateway 执行）、`final_response`（有据收尾）。
+
+### 风险路由
+
+| 风险等级 | 决策 | 流程 |
+|---|---|---|
+| LOW | AUTO | 直接进 Tool Executor 自动执行 |
+| MEDIUM（权限/建任务） | APPROVE | 挂起待人工审批（WAITING_APPROVAL） |
+| HIGH / 注入 | REJECT / APPROVE_ESCALATE | 拒绝执行或转主管审批 |
+
+### 阶段2 自测（离线，rule 驱动）
+
+```bash
+set LLM_DRIVER=rule
+.venv\Scripts\python -m agents.self_test
+```
+
+覆盖 10 项：权限申请分诊+待审批、工具计划含 grant_permission、系统故障自动执行、注入拒绝且授予工具不放行、缺信息澄清回环、全链路 Trace 非空。当前全部通过。
+
+### LLM 双驱动
+
+- `deepseek`：走 DeepSeek API，真实 LLM 推理（需 `DEEPSEEK_API_KEY`）。
+- `rule`（默认/离线）：规则驱动，与远端同构（`chat_json` 接口一致），无网络可复现、可评测。
+
+> Agent 节点统一经 `llm.chat_json` 调用，切换驱动不改节点代码。
 
 ---
 
@@ -116,6 +172,21 @@ ops-pilot/
 │   ├── tickets.py        # 80 工单 + 消息 + 历史
 │   ├── golden.py         # 30 golden tickets
 │   └── attacks.py        # 10 攻击样例
+├── tool_gateway/         # 阶段1 · 工具调用唯一入口
+│   ├── definitions.py    # 6 工具注册表（风险/审批/schema）
+│   ├── rules.py          # 风险分级 + 攻击防护规则
+│   ├── adapters.py       # 模拟企业 API（可替换真实系统）
+│   ├── gateway.py        # 7 步调用链 + 统一契约
+│   ├── audit.py          # 审计日志
+│   └── self_test.py      # 阶段1 自测
+├── agents/               # 阶段2 · LangGraph 3 Agent 编排
+│   ├── state.py          # GraphState（输入/中间/输出/追溯）
+│   ├── nodes.py          # triage/retrieval/action + 控制节点
+│   ├── graph.py          # 状态机 + run_ticket 入口
+│   ├── llm.py            # 双驱动（deepseek / rule）
+│   ├── rule_only.py      # 规则驱动（离线可复现）
+│   ├── _xxhash_fallback.py # xxhash 原生 DLL 垫片
+│   └── self_test.py      # 阶段2 自测
 ├── data/generated/       # 生成输出（gitignore）
 ├── requirements.txt
 └── README.md

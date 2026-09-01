@@ -25,13 +25,22 @@ st.set_page_config(page_title="OpsPilot 运维助手", page_icon="🚀", layout=
 st.markdown(
     """
 <style>
-    .metric-card {
-        background: #f8fafc; border: 1px solid #e2e8f0;
-        border-radius: 12px; padding: 1.1rem; text-align: center;
+    :root { --navy: #1F3E6E; --paper: #F6F4EF; }
+    html, body, [class*="css"], [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+        background: transparent;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                     "Microsoft YaHei", sans-serif;
     }
-    .metric-score { font-size: 1.9rem; font-weight: 700; color: #1d4ed8; }
-    .metric-label { font-size: 0.8rem; color: #64748b; margin-top: 0.25rem; }
-    .ok { color: #16a34a; font-weight: 600; }
+    h1, h2, h3, h4 { font-family: "Songti SC", "STSong", "SimSun", "Noto Serif SC", serif; }
+    .metric-card {
+        background: #FDFBF7; border: 1px solid #E2DCD0;
+        border-radius: 6px; padding: 1.1rem; text-align: center;
+        transition: border-color 0.2s;
+    }
+    .metric-card:hover { border-color: var(--navy); }
+    .metric-score { font-size: 1.8rem; font-weight: 700; color: var(--navy); }
+    .metric-label { font-size: 0.8rem; color: #6B655B; margin-top: 0.25rem; }
+    .ok { color: #3E6B4F; }
 </style>
 """,
     unsafe_allow_html=True,

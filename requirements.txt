@@ -1,26 +1,12 @@
-# --- OpsPilot 后端运行时依赖（阶段1起使用；阶段0生成器为零依赖）---
-fastapi>=0.115
-uvicorn[standard]
-pydantic==2.*
-python-dotenv
+# ===== OpsPilot 运维助手 · Streamlit Cloud 云端部署依赖 =====
+# 说明：
+#   - 云端入口为 streamlit_app.py（成果展示 + DeepSeek 对话演示）。
+#     完整版（FastAPI + React + pgvector + Redis + LangGraph）请在本机
+#     用 docker-compose 运行，依赖见 requirements.txt 顶部注释的清单。
+#   - 云端只需 streamlit 与 openai，体积小、冷启动快。
 
-# Agent 编排
-langgraph
-langchain-core
-langchain-openai
+# 核心 UI
+streamlit>=1.36,<2
 
-# 向量检索（pgvector）
-psycopg[binary]
-pgvector
-
-# 数据访问 / 配置
-sqlmodel
-redis
-
-# 安全
-python-jose[cryptography]
-passlib[bcrypt]
-
-# 测试 / 评测
-pytest
-httpx
+# LLM 对话（DeepSeek OpenAI 兼容接口）
+openai>=1.30

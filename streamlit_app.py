@@ -26,10 +26,13 @@ st.markdown(
     """
 <style>
     :root { --navy: #1F3E6E; --paper: #F6F4EF; }
-    html, body, [class*="css"], [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+    html, body, [class*="css"], [data-testid="stHeader"] {
         background: transparent;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
                      "Microsoft YaHei", sans-serif;
+    }
+    [data-testid="stAppViewContainer"], .stApp {
+        background: #F6F4EF;
     }
     h1, h2, h3, h4 { font-family: "Songti SC", "STSong", "SimSun", "Noto Serif SC", serif; }
     .metric-card {
